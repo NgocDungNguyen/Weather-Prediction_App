@@ -1,42 +1,54 @@
-document.addEventListener('DOMContentLoaded', function() {
-    var form = document.getElementById('prediction-form');
-    var fileInput = document.getElementById('file-upload');
-    var fileLabel = document.querySelector('label[for="file-upload"]');
-    var results = document.getElementById('results');
-    var loading = document.getElementById('loading');
-    var errorModal = document.getElementById('error-modal');
-    var errorMessage = document.getElementById('error-message');
-    var closeError = document.getElementById('close-error');
+document.addEventListener('DOMContentLoaded', function () {
+    const form = document.getElementById('prediction-form');
+    const fileInput = document.getElementById('file-upload');
+    const fileLabel = document.querySelector('label[for="file-upload"]');
+    const results = document.getElementById('results');
+    const loading = document.getElementById('loading');
+    const errorModal = document.getElementById('error-modal');
+    const errorMessage = document.getElementById('error-message');
+    const closeError = document.getElementById('close-error');
 
-    if (fileInput) {
-        fileInput.addEventListener('change', function(e) {
-            if (fileInput.files.length > 0) {
-                fileLabel.textContent = fileInput.files[0].name;
-            } else {
-                fileLabel.textContent = 'Choose a file';
-            }
-        });
-    }
+    console.log('DOM fully loaded and parsed');
 
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            loading.classList.remove('hidden');
-            results.classList.add('hidden');
+    // Update file label when a file is selected
+    fileInput.addEventListener('change', function () {
+        console.log('File input changed');
+        if (fileInput.files.length > 0) {
+            fileLabel.textContent = fileInput.files[0].name;
+            console.log('File selected:', fileInput.files[0].name);
+        } else {
+            fileLabel.textContent = 'Choose a file';
+            console.log('No file selected');
+        }
+    });
 
-            var formData = new FormData(form);
+    // Handle form submission
+    form.addEventListener('submit', function (e) {
+        e.preventDefault();
+        console.log('Form submitted');
+        loading.classList.remove('hidden');
+        results.classList.add('hidden');
 
-            fetch('/upload', {
-                method: 'POST',
-                body: formData
-            })
-            .then(function(response) {
+        const formData = new FormData(form);
+        
+        // Log form data
+        for (let [key, value] of formData.entries()) {
+            console.log(key, value);
+        }
+
+        fetch('/upload', {
+            method: 'POST',
+            body: formData,
+        })
+            .then((response) => {
+                console.log('Response status:', response.status);
                 if (!response.ok) {
                     throw new Error('Network response was not ok');
                 }
                 return response.json();
             })
-            .then(function(data) {
+            .then((data) => {
+                console.log('Response data:', data);
                 loading.classList.add('hidden');
                 if (data.error) {
                     showError(data.error);
@@ -44,13 +56,12 @@ document.addEventListener('DOMContentLoaded', function() {
                     displayResults(data);
                 }
             })
-            .catch(function(error) {
+            .catch((error) => {
+                console.error('Fetch error:', error);
                 loading.classList.add('hidden');
                 showError('An error occurred. Please try again.');
-                console.error('Error:', error);
             });
-        });
-    }
+    });
 
     function displayResults(data) {
         results.classList.remove('hidden');
