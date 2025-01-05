@@ -7,6 +7,10 @@ main = Blueprint('main', __name__)
 
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
+@main.route('/')
+def index():
+    return render_template('index.html')
+
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
