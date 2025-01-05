@@ -16,38 +16,38 @@ def index():
     return render_template('index.html')
 
 @main.route('/upload', methods=['POST'])
-   def upload():
-       print("Upload route hit")
-       if 'file' not in request.files:
-           print("No file part")
-           return jsonify({'error': 'No file part'}), 400
+def upload():
+    print("Upload route hit")
+    if 'file' not in request.files:
+        print("No file part")
+        return jsonify({'error': 'No file part'}), 400
        
-       file = request.files['file']
-       if file.filename == '':
-           print("No selected file")
-           return jsonify({'error': 'No selected file'}), 400
+    file = request.files['file']
+    if file.filename == '':
+        print("No selected file")
+        return jsonify({'error': 'No selected file'}), 400
        
-       if file and allowed_file(file.filename):
-           filename = secure_filename(file.filename)
-           filepath = os.path.join(UPLOAD_FOLDER, filename)
-           print(f"Saving file to: {filepath}")
-           file.save(filepath)
+    if file and allowed_file(file.filename):
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        print(f"Saving file to: {filepath}")
+        file.save(filepath)
            
-           city = request.form.get('city')
-           prediction_range = int(request.form.get('prediction_range', 7))
+        city = request.form.get('city')
+        prediction_range = int(request.form.get('prediction_range', 7))
            
-           print(f"Processing data for city: {city}, prediction range: {prediction_range}")
+        print(f"Processing data for city: {city}, prediction range: {prediction_range}")
            
-           try:
-               results = process_data(filepath, city, prediction_range)
-               print("Data processed successfully")
-               return jsonify(results)
-           except Exception as e:
-               print(f"Error processing data: {str(e)}")
-               return jsonify({'error': str(e)}), 500
-       else:
-           print("Invalid file type")
-           return jsonify({'error': 'Invalid file type'}), 400
+        try:
+            results = process_data(filepath, city, prediction_range)
+            print("Data processed successfully")
+            return jsonify(results)
+        except Exception as e:
+            print(f"Error processing data: {str(e)}")
+            return jsonify({'error': str(e)}), 500
+    else:
+        print("Invalid file type")
+        return jsonify({'error': 'Invalid file type'}), 400
 
 @main.route('/process', methods=['POST'])
 def process():
