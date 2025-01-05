@@ -12,11 +12,9 @@ import seaborn as sns
 import joblib
 import os
 import logging
-import warnings
+import traceback
 
 from .utils import create_output_folder
-
-warnings.filterwarnings("ignore", category=UserWarning)
 
 logger = logging.getLogger(__name__)
 
@@ -24,16 +22,22 @@ OUTPUT_FOLDER = create_output_folder()
 
 def process_data(filename, city, prediction_range):
     try:
-        os.makedirs(OUTPUT_FOLDER, exist_ok=True)
+        logger.info(f"Processing data for file: {filename}, city: {city}, prediction range: {prediction_range}")
         
         # Load and preprocess data
         df = pd.read_csv(filename)
+        logger.info(f"Data loaded. Shape: {df.shape}")
+        
+        if 'city' not in df.columns:
+            raise ValueError("'city' column not found in the CSV file")
+        
+        logger.info(f"Unique cities in the dataset: {df['city'].unique()}")
+        
         df = df[df['city'] == city]
         if df.empty:
             raise ValueError(f"No data found for city: {city}")
         
-        if len(df) < 30:
-            raise ValueError(f"Insufficient data points for city: {city}. At least 30 data points are required.")
+        logger.info(f"Data filtered for city {city}. Shape: {df.shape}")
         
         df['datetime'] = pd.to_datetime(df['datetime'])
         df = df.sort_values('datetime')
@@ -110,16 +114,20 @@ def process_data(filename, city, prediction_range):
         csv_filename = f"{city}_predictions.csv"
         results_df.to_csv(os.path.join(OUTPUT_FOLDER, csv_filename), index=False)
         
+        logger.info(f"Processing completed. Results saved to {csv_filename}")
+        
         return {
             'predictions': results_df.to_dict(orient='records'),
             'csv_filename': csv_filename
         }
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")
+        logger.error(traceback.format_exc())
         raise
 
 def generate_graphs(historical_data, predictions):
     try:
+        logger.info("Generating graphs")
         os.makedirs(OUTPUT_FOLDER, exist_ok=True)
         
         # Temperature over time
@@ -147,6 +155,9 @@ def generate_graphs(historical_data, predictions):
         plt.title('Correlation Heatmap')
         plt.savefig(os.path.join(OUTPUT_FOLDER, 'correlation_heatmap.png'))
         plt.close()
+        
+        logger.info("Graphs generated successfully")
     except Exception as e:
         logger.error(f"Error in generate_graphs: {str(e)}")
+        logger.error(traceback.format_exc())
         raise
