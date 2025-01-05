@@ -15,7 +15,8 @@ import os
 
 from .utils import create_output_folder
 
-OUTPUT_FOLDER = create_output_folder()
+OUTPUT_FOLDER = '/tmp/outputs'
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def process_data(filename, city, prediction_range):
     # Load and preprocess data

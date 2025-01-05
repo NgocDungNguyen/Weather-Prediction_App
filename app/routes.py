@@ -1,22 +1,14 @@
+import os
 from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from .pipeline import process_data
 from werkzeug.utils import secure_filename
-from .utils import create_output_folder
-
-import os
 
 main = Blueprint('main', __name__)
 
-UPLOAD_FOLDER = 'uploads'  # Change this line
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
-OUTPUT_FOLDER = create_output_folder()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-@main.route('/')
-def index():
-    return render_template('index.html')
 
 @main.route('/upload', methods=['POST'])
 def upload():
@@ -24,12 +16,12 @@ def upload():
     if 'file' not in request.files:
         current_app.logger.error("No file part")
         return jsonify({'error': 'No file part'}), 400
-       
+    
     file = request.files['file']
     if file.filename == '':
         current_app.logger.error("No selected file")
         return jsonify({'error': 'No selected file'}), 400
-       
+    
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
         filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
@@ -39,12 +31,12 @@ def upload():
         except Exception as e:
             current_app.logger.error(f"Error saving file: {str(e)}")
             return jsonify({'error': f"Error saving file: {str(e)}"}), 500
-           
+        
         city = request.form.get('city')
         prediction_range = int(request.form.get('prediction_range', 7))
-           
+        
         current_app.logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
-           
+        
         try:
             results = process_data(filepath, city, prediction_range)
             current_app.logger.info("Data processed successfully")
