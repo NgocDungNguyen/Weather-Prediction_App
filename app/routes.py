@@ -8,6 +8,7 @@ import logging
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
+UPLOAD_FOLDER = '/tmp/uploads'
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
 def allowed_file(filename):
@@ -32,11 +33,11 @@ def upload():
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+            filepath = os.path.join(UPLOAD_FOLDER, filename)
             logger.info(f"Saving file to: {filepath}")
             file.save(filepath)
             
-            city = request.form.get('city')
+            city = request.form.get('city', 'NewYork, NY, US')
             prediction_range = int(request.form.get('prediction_range', 7))
             
             logger.info(f"Form data - City: {city}, Prediction Range: {prediction_range}")
@@ -56,7 +57,7 @@ def upload():
 @main.route('/download/<filename>')
 def download(filename):
     try:
-        return send_file(os.path.join(current_app.config['UPLOAD_FOLDER'], filename), as_attachment=True)
+        return send_file(os.path.join('/tmp/outputs', filename), as_attachment=True)
     except Exception as e:
         logger.error(f"Error in download route: {str(e)}")
         return jsonify({'error': 'File not found'}), 404

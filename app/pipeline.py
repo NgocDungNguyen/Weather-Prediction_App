@@ -13,12 +13,12 @@ import joblib
 import os
 import logging
 import traceback
-
-from .utils import create_output_folder
+from datetime import timedelta
 
 logger = logging.getLogger(__name__)
 
-OUTPUT_FOLDER = create_output_folder()
+OUTPUT_FOLDER = '/tmp/outputs'
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def process_data(filename, city, prediction_range):
     try:
@@ -28,19 +28,10 @@ def process_data(filename, city, prediction_range):
         df = pd.read_csv(filename)
         logger.info(f"Data loaded. Shape: {df.shape}")
         
-        if 'city' not in df.columns:
-            raise ValueError("'city' column not found in the CSV file")
-        
-        logger.info(f"Unique cities in the dataset: {df['city'].unique()}")
-        
-        df = df[df['city'] == city]
-        if df.empty:
-            raise ValueError(f"No data found for city: {city}")
-        
-        logger.info(f"Data filtered for city {city}. Shape: {df.shape}")
-        
         df['datetime'] = pd.to_datetime(df['datetime'])
         df = df.sort_values('datetime')
+        
+        logger.info(f"Data filtered for city {city}. Shape: {df.shape}")
         
         # Feature engineering
         df['day_of_year'] = df['datetime'].dt.dayofyear
@@ -151,7 +142,8 @@ def generate_graphs(historical_data, predictions):
         
         # Correlation heatmap
         plt.figure(figsize=(10, 8))
-        sns.heatmap(historical_data[['tempmax', 'humidity', 'wind_speed', 'tempmin', 'temp', 'feelslike']].corr(), annot=True, cmap='coolwarm')
+        corr_features = ['tempmax', 'humidity', 'wind_speed', 'tempmin', 'temp', 'feelslike']
+        sns.heatmap(historical_data[corr_features].corr(), annot=True, cmap='coolwarm')
         plt.title('Correlation Heatmap')
         plt.savefig(os.path.join(OUTPUT_FOLDER, 'correlation_heatmap.png'))
         plt.close()
