@@ -1,5 +1,6 @@
 from flask import Flask
 import os
+import logging
 
 def create_app():
     app = Flask(__name__)
