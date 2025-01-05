@@ -1,12 +1,15 @@
 from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from .pipeline import process_data
 from werkzeug.utils import secure_filename
+from .utils import create_output_folder
+
 import os
 
 main = Blueprint('main', __name__)
 
-UPLOAD_FOLDER = 'app/uploads'
+UPLOAD_FOLDER = 'uploads'  # Change this line
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
+OUTPUT_FOLDER = create_output_folder()
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -17,36 +20,40 @@ def index():
 
 @main.route('/upload', methods=['POST'])
 def upload():
-    print("Upload route hit")
+    current_app.logger.info("Upload route hit")
     if 'file' not in request.files:
-        print("No file part")
+        current_app.logger.error("No file part")
         return jsonify({'error': 'No file part'}), 400
        
     file = request.files['file']
     if file.filename == '':
-        print("No selected file")
+        current_app.logger.error("No selected file")
         return jsonify({'error': 'No selected file'}), 400
        
     if file and allowed_file(file.filename):
         filename = secure_filename(file.filename)
-        filepath = os.path.join(UPLOAD_FOLDER, filename)
-        print(f"Saving file to: {filepath}")
-        file.save(filepath)
+        filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
+        current_app.logger.info(f"Saving file to: {filepath}")
+        try:
+            file.save(filepath)
+        except Exception as e:
+            current_app.logger.error(f"Error saving file: {str(e)}")
+            return jsonify({'error': f"Error saving file: {str(e)}"}), 500
            
         city = request.form.get('city')
         prediction_range = int(request.form.get('prediction_range', 7))
            
-        print(f"Processing data for city: {city}, prediction range: {prediction_range}")
+        current_app.logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
            
         try:
             results = process_data(filepath, city, prediction_range)
-            print("Data processed successfully")
+            current_app.logger.info("Data processed successfully")
             return jsonify(results)
         except Exception as e:
-            print(f"Error processing data: {str(e)}")
+            current_app.logger.error(f"Error processing data: {str(e)}")
             return jsonify({'error': str(e)}), 500
     else:
-        print("Invalid file type")
+        current_app.logger.error("Invalid file type")
         return jsonify({'error': 'Invalid file type'}), 400
 
 @main.route('/process', methods=['POST'])
