@@ -31,7 +31,7 @@ def process_data(filename, city, prediction_range):
         df['datetime'] = pd.to_datetime(df['datetime'])
         df = df.sort_values('datetime')
         
-        logger.info(f"Data filtered for city {city}. Shape: {df.shape}")
+        logger.info(f"Data sorted by datetime. Shape: {df.shape}")
         
         # Feature engineering
         df['day_of_year'] = df['datetime'].dt.dayofyear
@@ -40,7 +40,7 @@ def process_data(filename, city, prediction_range):
         df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
         
         # Prepare features and target
-        features = ['day_of_year', 'month', 'day_of_week', 'is_weekend', 'humidity', 'wind_speed', 'tempmin', 'temp', 'feelslike']
+        features = ['day_of_year', 'month', 'day_of_week', 'is_weekend', 'humidity', 'windspeed', 'tempmin', 'temp', 'feelslike']
         target = 'tempmax'
         
         X = df[features]
@@ -50,7 +50,7 @@ def process_data(filename, city, prediction_range):
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
         # Define preprocessing steps
-        numeric_features = ['day_of_year', 'month', 'humidity', 'wind_speed', 'tempmin', 'temp', 'feelslike']
+        numeric_features = ['day_of_year', 'month', 'humidity', 'windspeed', 'tempmin', 'temp', 'feelslike']
         categorical_features = ['day_of_week', 'is_weekend']
         
         numeric_transformer = Pipeline(steps=[
@@ -84,7 +84,7 @@ def process_data(filename, city, prediction_range):
             'day_of_week': future_dates.dayofweek,
             'is_weekend': future_dates.dayofweek.isin([5, 6]).astype(int),
             'humidity': [df['humidity'].mean()] * prediction_range,
-            'wind_speed': [df['wind_speed'].mean()] * prediction_range,
+            'windspeed': [df['windspeed'].mean()] * prediction_range,
             'tempmin': [df['tempmin'].mean()] * prediction_range,
             'temp': [df['temp'].mean()] * prediction_range,
             'feelslike': [df['feelslike'].mean()] * prediction_range
@@ -142,7 +142,7 @@ def generate_graphs(historical_data, predictions):
         
         # Correlation heatmap
         plt.figure(figsize=(10, 8))
-        corr_features = ['tempmax', 'humidity', 'wind_speed', 'tempmin', 'temp', 'feelslike']
+        corr_features = ['tempmax', 'humidity', 'windspeed', 'tempmin', 'temp', 'feelslike']
         sns.heatmap(historical_data[corr_features].corr(), annot=True, cmap='coolwarm')
         plt.title('Correlation Heatmap')
         plt.savefig(os.path.join(OUTPUT_FOLDER, 'correlation_heatmap.png'))
