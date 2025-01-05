@@ -1,12 +1,15 @@
 from flask import Blueprint, render_template, request, jsonify, send_file
 from .pipeline import process_data
-from .utils import allowed_file, create_upload_folder, create_output_folder
+from werkzeug.utils import secure_filename
 import os
 
 main = Blueprint('main', __name__)
 
-UPLOAD_FOLDER = create_upload_folder()
-OUTPUT_FOLDER = create_output_folder()
+UPLOAD_FOLDER = 'app/uploads'
+ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
+
+def allowed_file(filename):
+    return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
 
 @main.route('/')
 def index():
@@ -22,15 +25,18 @@ def upload():
         return jsonify({'error': 'No selected file'}), 400
     
     if file and allowed_file(file.filename):
-        filename = os.path.join(UPLOAD_FOLDER, file.filename)
-        file.save(filename)
+        filename = secure_filename(file.filename)
+        filepath = os.path.join(UPLOAD_FOLDER, filename)
+        file.save(filepath)
         
         city = request.form.get('city')
         prediction_range = int(request.form.get('prediction_range', 7))
         
-        results = process_data(filename, city, prediction_range)
-        
-        return jsonify(results)
+        try:
+            results = process_data(filepath, city, prediction_range)
+            return jsonify(results)
+        except Exception as e:
+            return jsonify({'error': str(e)}), 500
     else:
         return jsonify({'error': 'Invalid file type'}), 400
 

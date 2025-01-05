@@ -1,12 +1,20 @@
 document.addEventListener('DOMContentLoaded', function() {
     const form = document.getElementById('prediction-form');
+    const fileInput = document.getElementById('file-upload');
+    const fileLabel = document.querySelector('label[for="file-upload"]');
     const results = document.getElementById('results');
     const loading = document.getElementById('loading');
     const errorModal = document.getElementById('error-modal');
     const errorMessage = document.getElementById('error-message');
     const closeError = document.getElementById('close-error');
-    const fileUpload = document.getElementById('file-upload');
-    const fileLabel = document.querySelector('label[for="file-upload"]');
+
+    fileInput.addEventListener('change', function(e) {
+        if (fileInput.files.length > 0) {
+            fileLabel.textContent = fileInput.files[0].name;
+        } else {
+            fileLabel.textContent = 'Choose a file';
+        }
+    });
 
     form.addEventListener('submit', function(e) {
         e.preventDefault();
@@ -19,8 +27,13 @@ document.addEventListener('DOMContentLoaded', function() {
             method: 'POST',
             body: formData
         })
-        .then(response =&gt; response.json())
-        .then(data =&gt; {
+        .then(response => {
+            if (!response.ok) {
+                throw new Error('Network response was not ok');
+            }
+            return response.json();
+        })
+        .then(data => {
             loading.classList.add('hidden');
             if (data.error) {
                 showError(data.error);
@@ -28,45 +41,34 @@ document.addEventListener('DOMContentLoaded', function() {
                 displayResults(data);
             }
         })
-        .catch(error =&gt; {
+        .catch(error => {
             loading.classList.add('hidden');
             showError('An error occurred. Please try again.');
+            console.error('Error:', error);
         });
     });
 
     function displayResults(data) {
         results.classList.remove('hidden');
         const table = document.getElementById('prediction-table');
-        table.innerHTML = '
-<table class="w-full border-collapse border border-gray-300">
- <thead>
-  <tr class="bg-gray-100">
-   <th class="border border-gray-300 px-4 py-2">
-    Date
-   </th>
-   <th class="border border-gray-300 px-4 py-2">
-    Predicted Max Temperature (°C)
-   </th>
-  </tr>
- </thead>
- <tbody>
- </tbody>
-</table>
-';
-        const tbody = table.querySelector('tbody');
-
-        data.predictions.forEach(prediction =&gt; {
-            const row = document.createElement('tr');
-            row.innerHTML = `
-<td class="border border-gray-300 px-4 py-2">
- ${prediction.date}
-</td>
-<td class="border border-gray-300 px-4 py-2">
- ${prediction.predicted_tempmax.toFixed(2)}
-</td>
-`;
-            tbody.appendChild(row);
-        });
+        table.innerHTML = `
+            <table class="w-full border-collapse border border-gray-300">
+                <thead>
+                    <tr class="bg-gray-100">
+                        <th class="border border-gray-300 px-4 py-2">Date</th>
+                        <th class="border border-gray-300 px-4 py-2">Predicted Max Temperature (°C)</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${data.predictions.map(prediction => `
+                        <tr>
+                            <td class="border border-gray-300 px-4 py-2">${prediction.date}</td>
+                            <td class="border border-gray-300 px-4 py-2">${prediction.predicted_tempmax.toFixed(2)}</td>
+                        </tr>
+                    `).join('')}
+                </tbody>
+            </table>
+        `;
 
         document.getElementById('temp-over-time').src = '/static/outputs/temperature_over_time.png';
         document.getElementById('temp-distribution').src = '/static/outputs/temperature_distribution.png';
@@ -85,28 +87,10 @@ document.addEventListener('DOMContentLoaded', function() {
         errorModal.classList.add('hidden');
     });
 
-    fileUpload.addEventListener('change', function(e) {
-        if (e.target.files.length &gt; 0) {
-            fileLabel.textContent = e.target.files[0].name;
-        } else {
-            fileLabel.textContent = 'Upload a file';
-        }
-    });
-
     const contactForm = document.getElementById('contact-form');
     contactForm.addEventListener('submit', function(e) {
         e.preventDefault();
         alert('Thank you for your message. We will get back to you soon!');
         contactForm.reset();
-    });
-
-    // Smooth scrolling for anchor links
-    document.querySelectorAll('a[href^="#"]').forEach(anchor =&gt; {
-        anchor.addEventListener('click', function (e) {
-            e.preventDefault();
-            document.querySelector(this.getAttribute('href')).scrollIntoView({
-                behavior: 'smooth'
-            });
-        });
     });
 });
