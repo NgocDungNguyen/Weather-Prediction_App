@@ -9,6 +9,7 @@ main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
 UPLOAD_FOLDER = '/tmp/uploads'
+OUTPUT_FOLDER = '/tmp/outputs'
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
 def allowed_file(filename):
@@ -35,6 +36,7 @@ def upload():
             filename = secure_filename(file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             logger.info(f"Saving file to: {filepath}")
+            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             file.save(filepath)
             
             city = request.form.get('city', 'NewYork, NY, US')
@@ -57,7 +59,7 @@ def upload():
 @main.route('/download/<filename>')
 def download(filename):
     try:
-        return send_file(os.path.join('/tmp/outputs', filename), as_attachment=True)
+        return send_file(os.path.join(OUTPUT_FOLDER, filename), as_attachment=True)
     except Exception as e:
         logger.error(f"Error in download route: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
