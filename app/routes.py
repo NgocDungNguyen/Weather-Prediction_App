@@ -45,9 +45,9 @@ def upload():
             logger.info("Data processed successfully")
             
             # Add paths to generated images
-            results['temperature_over_time_path'] = url_for('static', filename='outputs/temperature_over_time.png')
-            results['temperature_distribution_path'] = url_for('static', filename='outputs/temperature_distribution.png')
-            results['correlation_heatmap_path'] = url_for('static', filename='outputs/correlation_heatmap.png')
+            results['temperature_over_time_path'] = url_for('static', filename='temperature_over_time.png')
+            results['temperature_distribution_path'] = url_for('static', filename='temperature_distribution.png')
+            results['correlation_heatmap_path'] = url_for('static', filename='correlation_heatmap.png')
             
             return jsonify(results)
         else:

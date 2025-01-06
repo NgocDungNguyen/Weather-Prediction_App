@@ -1,6 +1,6 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, KFold, cross_val_score, cross_val_predict, RandomizedSearchCV
+from sklearn.model_selection import train_test_split, KFold, cross_val_score, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
 from sklearn.impute import SimpleImputer
 from sklearn.compose import ColumnTransformer
@@ -31,9 +31,6 @@ warnings.filterwarnings("ignore", message="No further splits with positive gain"
 
 # Configure KFold cross-validation
 kfold = KFold(n_splits=5, shuffle=True, random_state=42)
-
-def get_output_folder():
-    return current_app.config['OUTPUT_FOLDER']
 
 def process_data(filename, city, prediction_range):
     try:
@@ -245,7 +242,7 @@ def predict_future(data, model, prediction_range):
     return future_data[['datetime', 'predicted_tempmax']]
 
 def generate_graphs(historical_data, future_data):
-    output_folder = get_output_folder()
+    output_folder = current_app.config['OUTPUT_FOLDER']
     
     # Temperature over time
     plt.figure(figsize=(12, 6))
@@ -273,3 +270,7 @@ def generate_graphs(historical_data, future_data):
     plt.title('Correlation Heatmap')
     plt.savefig(os.path.join(output_folder, 'correlation_heatmap.png'))
     plt.close()
+
+    # Save predictions to CSV
+    csv_filename = f"{historical_data['city'].iloc[0]}_predictions.csv"
+    future_data.to_csv(os.path.join(output_folder, csv_filename), index=False)
