@@ -19,6 +19,7 @@ import joblib
 import os
 import logging
 import warnings
+import traceback
 from datetime import timedelta
 from flask import current_app
 
@@ -42,7 +43,6 @@ def process_data(filename, city, prediction_range):
         logger.info(f"Raw data columns: {raw_data.columns.tolist()}")
         
         raw_data['datetime'] = pd.to_datetime(raw_data['datetime'])
-        raw_data.drop(columns=["name", "icon", "stations", "description"], inplace=True)
         
         # Remove outliers
         raw_data = remove_outliers(raw_data, 'tempmax')
@@ -75,7 +75,23 @@ def process_data(filename, city, prediction_range):
         # Train and evaluate models
         best_model, best_model_name = train_and_evaluate_models(X_train, y_train)
         
-        # ... (rest of the function remains the same)
+        # Fine-tune the best model
+        best_model_tuned = fine_tune_model(best_model, best_model_name, X_train, y_train)
+        
+        # Make predictions for future dates
+        future_pred = predict_future(raw_data, best_model_tuned, prediction_range)
+        
+        # Generate and save graphs
+        generate_graphs(raw_data, future_pred)
+        
+        logger.info("Processing completed successfully")
+        
+        return {
+            'predictions': future_pred.to_dict(orient='records'),
+            'best_model': best_model_name,
+            'rmse': np.sqrt(mean_squared_error(y_test, best_model_tuned.predict(X_test))),
+            'csv_filename': f"{city}_predictions.csv"
+        }
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")
         logger.error(traceback.format_exc())
