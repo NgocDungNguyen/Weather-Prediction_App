@@ -44,7 +44,7 @@ def process_data(filename, city, prediction_range):
         best_model, best_model_name = train_and_evaluate_models(X_train, y_train)
         
         # Make predictions for future dates
-        future_pred = predict_future(raw_data, best_model, prediction_range)
+        future_pred = predict_future(raw_data, best_model, prediction_range, feature_columns)
         
         # Generate and save graphs
         generate_graphs(raw_data, future_pred)
@@ -105,18 +105,17 @@ def train_and_evaluate_models(X_train, y_train):
     
     return best_model, best_model_name
 
-def predict_future(data, model, prediction_range):
+def predict_future(data, model, prediction_range, feature_columns):
     last_date = data['datetime'].max()
     future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=prediction_range)
     future_data = pd.DataFrame({'datetime': future_dates})
     
     future_data = add_time_features(future_data)
     
-    for col in data.columns:
-        if col not in future_data.columns and col not in ['datetime', 'tempmax']:
+    for col in feature_columns:
+        if col not in future_data.columns:
             future_data[col] = data[col].mean()
     
-    feature_columns = [col for col in future_data.columns if col not in ['datetime', 'tempmax']]
     future_pred = model.predict(future_data[feature_columns])
     future_data['predicted_tempmax'] = future_pred
     
