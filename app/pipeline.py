@@ -19,15 +19,15 @@ def process_data(filename, city, prediction_range):
         raw_data = pd.read_csv(filename, parse_dates=['datetime'])
         logger.info(f"Data loaded. Shape: {raw_data.shape}")
         
+        # Add time features
+        raw_data['day_of_year'] = raw_data['datetime'].dt.dayofyear
+        raw_data['month'] = raw_data['datetime'].dt.month
+        
         # Select features
         features = ['temp', 'humidity', 'windspeed', 'day_of_year', 'month']
         X = raw_data[features]
         y = raw_data['tempmax']
         logger.info(f"Features selected: {features}")
-        
-        # Add time features
-        X['day_of_year'] = raw_data['datetime'].dt.dayofyear
-        X['month'] = raw_data['datetime'].dt.month
         
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
