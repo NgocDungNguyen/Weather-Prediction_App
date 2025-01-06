@@ -44,7 +44,9 @@ def upload():
             
             logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
             
-            future = executor.submit(process_data, filepath, city, prediction_range)
+            # Pass the application context to the thread
+            app = current_app._get_current_object()
+            future = executor.submit(process_data_with_app_context, app, filepath, city, prediction_range)
             try:
                 results = future.result(timeout=60)  # 60 seconds timeout
                 logger.info("Data processed successfully")
@@ -67,3 +69,7 @@ def download(filename):
     except Exception as e:
         logger.error(f"Error in download route: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
+
+def process_data_with_app_context(app, *args, **kwargs):
+    with app.app_context():
+        return process_data(*args, **kwargs)
