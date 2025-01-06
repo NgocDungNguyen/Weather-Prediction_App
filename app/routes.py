@@ -1,12 +1,15 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, current_app, url_for
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app
 from .pipeline import process_data
 from werkzeug.utils import secure_filename
 import os
 import traceback
 import logging
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
+
+executor = ThreadPoolExecutor(max_workers=2)
 
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
@@ -36,20 +39,19 @@ def upload():
             logger.info(f"Saving file to: {filepath}")
             file.save(filepath)
             
-            city = request.form.get('city', 'NewYork, NY, US')
+            city = request.form.get('city', 'NewYork')
             prediction_range = int(request.form.get('prediction_range', 7))
             
             logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
             
-            results = process_data(filepath, city, prediction_range)
-            logger.info("Data processed successfully")
-            
-            # Add paths to generated images
-            results['temperature_over_time_path'] = url_for('static', filename='temperature_over_time.png')
-            results['temperature_distribution_path'] = url_for('static', filename='temperature_distribution.png')
-            results['correlation_heatmap_path'] = url_for('static', filename='correlation_heatmap.png')
-            
-            return jsonify(results)
+            future = executor.submit(process_data, filepath, city, prediction_range)
+            try:
+                results = future.result(timeout=60)  # 60 seconds timeout
+                logger.info("Data processed successfully")
+                return jsonify(results)
+            except TimeoutError:
+                logger.error("Processing timed out")
+                return jsonify({'error': 'Processing timed out. Please try again with a smaller dataset or shorter prediction range.'}), 504
         else:
             logger.error(f"Invalid file type: {file.filename}")
             return jsonify({'error': 'Invalid file type'}), 400
