@@ -1,6 +1,5 @@
 import pandas as pd
 import numpy as np
-from flask import current_app
 from sklearn.model_selection import train_test_split, KFold, cross_val_score, cross_val_predict, RandomizedSearchCV
 from sklearn.preprocessing import StandardScaler, OneHotEncoder, PolynomialFeatures
 from sklearn.impute import SimpleImputer
@@ -21,11 +20,9 @@ import os
 import logging
 import warnings
 from datetime import timedelta
+from flask import current_app
 
 logger = logging.getLogger(__name__)
-
-OUTPUT_FOLDER = current_app.config['OUTPUT_FOLDER']
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 # Suppress warnings
 warnings.simplefilter(action='ignore', category=FutureWarning)
@@ -34,6 +31,9 @@ warnings.filterwarnings("ignore", message="No further splits with positive gain"
 
 # Configure KFold cross-validation
 kfold = KFold(n_splits=5, shuffle=True, random_state=42)
+
+def get_output_folder():
+    return current_app.config['OUTPUT_FOLDER']
 
 def process_data(filename, city, prediction_range):
     try:
@@ -244,6 +244,8 @@ def predict_future(data, model, prediction_range):
     return future_data[['datetime', 'predicted_tempmax']]
 
 def generate_graphs(historical_data, future_data):
+    output_folder = get_output_folder()
+    
     # Temperature over time
     plt.figure(figsize=(12, 6))
     plt.plot(historical_data['datetime'], historical_data['tempmax'], label='Historical')
@@ -252,7 +254,7 @@ def generate_graphs(historical_data, future_data):
     plt.xlabel('Date')
     plt.ylabel('Temperature (°C)')
     plt.legend()
-    plt.savefig(os.path.join(OUTPUT_FOLDER, 'temperature_over_time.png'))
+    plt.savefig(os.path.join(output_folder, 'temperature_over_time.png'))
     plt.close()
     
     # Temperature distribution
@@ -260,7 +262,7 @@ def generate_graphs(historical_data, future_data):
     sns.histplot(historical_data['tempmax'], kde=True)
     plt.title('Temperature Distribution')
     plt.xlabel('Temperature (°C)')
-    plt.savefig(os.path.join(OUTPUT_FOLDER, 'temperature_distribution.png'))
+    plt.savefig(os.path.join(output_folder, 'temperature_distribution.png'))
     plt.close()
     
     # Correlation heatmap
@@ -268,5 +270,5 @@ def generate_graphs(historical_data, future_data):
     numeric_data = historical_data.select_dtypes(include=[np.number])
     sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap='coolwarm')
     plt.title('Correlation Heatmap')
-    plt.savefig(os.path.join(OUTPUT_FOLDER, 'correlation_heatmap.png'))
+    plt.savefig(os.path.join(output_folder, 'correlation_heatmap.png'))
     plt.close()

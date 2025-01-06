@@ -8,15 +8,16 @@ import logging
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
-UPLOAD_FOLDER = current_app.config['UPLOAD_FOLDER']
-OUTPUT_FOLDER = current_app.config['OUTPUT_FOLDER']
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
-
-os.makedirs(UPLOAD_FOLDER, exist_ok=True)
-os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+def get_upload_folder():
+    return current_app.config['UPLOAD_FOLDER']
+
+def get_output_folder():
+    return current_app.config['OUTPUT_FOLDER']
 
 @main.route('/')
 def index():
@@ -37,7 +38,7 @@ def upload():
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(UPLOAD_FOLDER, filename)
+            filepath = os.path.join(get_upload_folder(), filename)
             logger.info(f"Saving file to: {filepath}")
             file.save(filepath)
             
@@ -66,7 +67,7 @@ def upload():
 @main.route('/download/<filename>')
 def download(filename):
     try:
-        return send_file(os.path.join(OUTPUT_FOLDER, filename), as_attachment=True)
+        return send_file(os.path.join(get_output_folder(), filename), as_attachment=True)
     except Exception as e:
         logger.error(f"Error in download route: {str(e)}")
         return jsonify({'error': 'File not found'}), 404
