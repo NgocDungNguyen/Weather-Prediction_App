@@ -2,7 +2,7 @@ import pandas as pd
 import numpy as np
 from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression, BayesianRidge
+from sklearn.linear_model import LinearRegression
 from sklearn.preprocessing import PolynomialFeatures
 from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error
@@ -87,7 +87,6 @@ def add_time_features(df):
 def train_and_evaluate_models(X_train, y_train):
     models = {
         'RandomForestReg': RandomForestRegressor(n_estimators=100, random_state=42),
-        'BayesianRidge': BayesianRidge(),
         'LinearReg': LinearRegression(),
         'PolynomialReg': make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
     }
@@ -122,12 +121,6 @@ def fine_tune_model(model, model_name, X_train, y_train):
             'min_samples_split': randint(2, 20),
             'min_samples_leaf': randint(1, 20),
             'max_features': uniform(0.1, 0.9)
-        },
-        'BayesianRidge': {
-            'alpha_1': uniform(0.001, 1),
-            'alpha_2': uniform(0.001, 1),
-            'lambda_1': uniform(0.001, 1),
-            'lambda_2': uniform(0.001, 1)
         },
         'LinearReg': {
             'fit_intercept': [True, False],
