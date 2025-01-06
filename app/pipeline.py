@@ -1,16 +1,11 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
-from sklearn.preprocessing import PolynomialFeatures
-from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
-import seaborn as sns
 import os
 import logging
-import traceback
 from datetime import timedelta
 from flask import current_app
 
@@ -20,106 +15,64 @@ def process_data(filename, city, prediction_range):
     try:
         logger.info(f"Processing data for file: {filename}, city: {city}, prediction range: {prediction_range}")
         
-        # Load and preprocess data
+        # Load data
         raw_data = pd.read_csv(filename, parse_dates=['datetime'])
+        logger.info(f"Data loaded. Shape: {raw_data.shape}")
         
-        # Select only numeric columns and datetime
-        numeric_columns = ['datetime'] + raw_data.select_dtypes(include=[np.number]).columns.tolist()
-        raw_data = raw_data[numeric_columns]
-        
-        # Remove outliers
-        raw_data = remove_outliers(raw_data, 'tempmax')
-        
-        # Feature engineering
-        raw_data = add_time_features(raw_data)
-        
-        # Prepare data for modeling
-        feature_columns = [col for col in raw_data.columns if col not in ['datetime', 'tempmax']]
-        X = raw_data[feature_columns]
+        # Select features
+        features = ['temp', 'humidity', 'windspeed', 'day_of_year', 'month']
+        X = raw_data[features]
         y = raw_data['tempmax']
+        logger.info(f"Features selected: {features}")
+        
+        # Add time features
+        X['day_of_year'] = raw_data['datetime'].dt.dayofyear
+        X['month'] = raw_data['datetime'].dt.month
         
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+        logger.info("Data split completed")
         
-        # Train and evaluate models
-        best_model, best_model_name = train_and_evaluate_models(X_train, y_train)
+        # Train model
+        model = RandomForestRegressor(n_estimators=100, random_state=42)
+        model.fit(X_train, y_train)
+        logger.info("Model training completed")
         
-        # Make predictions for future dates
-        future_pred = predict_future(raw_data, best_model, prediction_range, feature_columns)
+        # Make predictions
+        future_pred = predict_future(raw_data, model, prediction_range, features)
+        logger.info("Future predictions made")
         
-        # Generate and save graphs
+        # Generate graphs
         graph_paths = generate_graphs(raw_data, future_pred)
+        logger.info("Graphs generated")
         
-        logger.info("Processing completed successfully")
+        # Calculate RMSE
+        rmse = np.sqrt(mean_squared_error(y_test, model.predict(X_test)))
         
         return {
             'predictions': future_pred.to_dict(orient='records'),
-            'best_model': best_model_name,
-            'rmse': np.sqrt(mean_squared_error(y_test, best_model.predict(X_test))),
+            'best_model': 'RandomForestRegressor',
+            'rmse': rmse,
             'csv_filename': f"{city}_predictions.csv",
             'graph_paths': graph_paths
         }
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")
-        logger.error(traceback.format_exc())
         raise
 
-def remove_outliers(df, column, factor=1.5):
-    Q1 = df[column].quantile(0.25)
-    Q3 = df[column].quantile(0.75)
-    IQR = Q3 - Q1
-    lower_bound = Q1 - factor * IQR
-    upper_bound = Q3 + factor * IQR
-    return df[(df[column] >= lower_bound) & (df[column] <= upper_bound)]
-
-def add_time_features(df):
-    df['day_of_year'] = df['datetime'].dt.dayofyear
-    df['month'] = df['datetime'].dt.month
-    df['day_of_week'] = df['datetime'].dt.dayofweek
-    df['is_weekend'] = df['day_of_week'].isin([5, 6]).astype(int)
-    return df
-
-def train_and_evaluate_models(X_train, y_train):
-    models = {
-        'RandomForestReg': RandomForestRegressor(n_estimators=100, random_state=42),
-        'LinearReg': LinearRegression(),
-        'PolynomialReg': make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
-    }
-    
-    best_model_name = None
-    best_cross_val_rmse = float('inf')
-    
-    for name, model in models.items():
-        try:
-            cv_rmse_scores = -cross_val_score(model, X_train, y_train, cv=3, scoring='neg_mean_squared_error')
-            avg_rmse = np.sqrt(cv_rmse_scores.mean())
-            
-            if avg_rmse < best_cross_val_rmse:
-                best_cross_val_rmse = avg_rmse
-                best_model_name = name
-        except Exception as e:
-            logger.error(f"Error occurred while evaluating {name}: {str(e)}")
-    
-    if best_model_name is None:
-        raise ValueError("No suitable model found. All models failed during evaluation.")
-    
-    best_model = models[best_model_name]
-    best_model.fit(X_train, y_train)
-    
-    return best_model, best_model_name
-
-def predict_future(data, model, prediction_range, feature_columns):
+def predict_future(data, model, prediction_range, features):
     last_date = data['datetime'].max()
     future_dates = pd.date_range(start=last_date + timedelta(days=1), periods=prediction_range)
     future_data = pd.DataFrame({'datetime': future_dates})
     
-    future_data = add_time_features(future_data)
+    future_data['day_of_year'] = future_data['datetime'].dt.dayofyear
+    future_data['month'] = future_data['datetime'].dt.month
     
-    for col in feature_columns:
-        if col not in future_data.columns:
-            future_data[col] = data[col].mean()
+    for feature in features:
+        if feature not in future_data.columns:
+            future_data[feature] = data[feature].mean()
     
-    future_pred = model.predict(future_data[feature_columns])
+    future_pred = model.predict(future_data[features])
     future_data['predicted_tempmax'] = future_pred
     
     return future_data[['datetime', 'predicted_tempmax']]
@@ -139,24 +92,6 @@ def generate_graphs(historical_data, future_data):
     plt.savefig(temp_over_time_path)
     plt.close()
     
-    # Temperature distribution
-    plt.figure(figsize=(10, 6))
-    sns.histplot(historical_data['tempmax'], kde=True)
-    plt.title('Temperature Distribution')
-    plt.xlabel('Temperature (°C)')
-    temp_dist_path = os.path.join(output_folder, 'temperature_distribution.png')
-    plt.savefig(temp_dist_path)
-    plt.close()
-    
-    # Correlation heatmap
-    plt.figure(figsize=(12, 10))
-    numeric_data = historical_data.select_dtypes(include=[np.number])
-    sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap='coolwarm')
-    plt.title('Correlation Heatmap')
-    corr_heatmap_path = os.path.join(output_folder, 'correlation_heatmap.png')
-    plt.savefig(corr_heatmap_path)
-    plt.close()
-
     # Save predictions to CSV
     csv_filename = "predictions.csv"
     csv_path = os.path.join(output_folder, csv_filename)
@@ -164,7 +99,5 @@ def generate_graphs(historical_data, future_data):
 
     return {
         'temperature_over_time': '/static/outputs/temperature_over_time.png',
-        'temperature_distribution': '/static/outputs/temperature_distribution.png',
-        'correlation_heatmap': '/static/outputs/correlation_heatmap.png',
         'csv_file': f'/static/outputs/{csv_filename}'
     }

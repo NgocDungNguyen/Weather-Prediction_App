@@ -44,18 +44,14 @@ def upload():
             
             logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
             
-            # Pass the application context to the thread
             app = current_app._get_current_object()
             future = executor.submit(process_data_with_app_context, app, filepath, city, prediction_range)
             try:
-                results = future.result(timeout=120)  # 120 seconds timeout
+                results = future.result(timeout=180)  # 3 minutes timeout
                 logger.info("Data processed successfully")
                 
-                # Include graph paths in the response
                 results['graph_paths'] = {
                     'temperature_over_time': url_for('static', filename='outputs/temperature_over_time.png'),
-                    'temperature_distribution': url_for('static', filename='outputs/temperature_distribution.png'),
-                    'correlation_heatmap': url_for('static', filename='outputs/correlation_heatmap.png'),
                     'csv_file': url_for('static', filename=f'outputs/{results["csv_filename"]}')
                 }
                 
