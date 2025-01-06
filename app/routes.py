@@ -51,8 +51,8 @@ def upload():
                 logger.info("Data processed successfully")
                 
                 results['graph_paths'] = {
-                    'temperature_over_time': url_for('static', filename='outputs/temperature_over_time.png'),
-                    'csv_file': url_for('static', filename=f'outputs/{results["csv_filename"]}')
+                    'temperature_over_time': url_for('static', filename=f'outputs/{results["graph_paths"]["temperature_over_time"]}'),
+                    'csv_file': url_for('static', filename=f'outputs/{results["graph_paths"]["csv_file"]}')
                 }
                 
                 return jsonify(results)

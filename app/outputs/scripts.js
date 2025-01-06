@@ -82,8 +82,6 @@ document.addEventListener('DOMContentLoaded', function () {
         table.innerHTML = tableHTML;
 
         document.getElementById('temp-over-time').src = data.graph_paths.temperature_over_time;
-        document.getElementById('temp-distribution').src = data.graph_paths.temperature_distribution;
-        document.getElementById('correlation-heatmap').src = data.graph_paths.correlation_heatmap;
         document.getElementById('download-csv').href = data.graph_paths.csv_file;
 
         results.scrollIntoView({ behavior: 'smooth' });
@@ -97,15 +95,6 @@ document.addEventListener('DOMContentLoaded', function () {
     if (closeError) {
         closeError.addEventListener('click', function() {
             errorModal.classList.add('hidden');
-        });
-    }
-
-    var contactForm = document.getElementById('contact-form');
-    if (contactForm) {
-        contactForm.addEventListener('submit', function(e) {
-            e.preventDefault();
-            alert('Thank you for your message. We will get back to you soon!');
-            contactForm.reset();
         });
     }
 });

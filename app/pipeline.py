@@ -98,6 +98,6 @@ def generate_graphs(historical_data, future_data):
     future_data.to_csv(csv_path, index=False)
 
     return {
-        'temperature_over_time': '/static/outputs/temperature_over_time.png',
-        'csv_file': f'/static/outputs/{csv_filename}'
+        'temperature_over_time': 'temperature_over_time.png',
+        'csv_file': csv_filename
     }
