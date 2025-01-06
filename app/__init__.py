@@ -3,7 +3,7 @@ import os
 import logging
 
 def create_app():
-    app = Flask(__name__)
+    app = Flask(__name__, static_folder='/tmp')
     
     # Set up logging
     logging.basicConfig(level=logging.INFO)
