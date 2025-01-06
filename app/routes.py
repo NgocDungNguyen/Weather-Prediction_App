@@ -8,9 +8,12 @@ import logging
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
-UPLOAD_FOLDER = '/tmp/uploads'
-OUTPUT_FOLDER = '/tmp/outputs'
+UPLOAD_FOLDER = current_app.config['UPLOAD_FOLDER']
+OUTPUT_FOLDER = current_app.config['OUTPUT_FOLDER']
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
+os.makedirs(OUTPUT_FOLDER, exist_ok=True)
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
@@ -36,17 +39,21 @@ def upload():
             filename = secure_filename(file.filename)
             filepath = os.path.join(UPLOAD_FOLDER, filename)
             logger.info(f"Saving file to: {filepath}")
-            os.makedirs(UPLOAD_FOLDER, exist_ok=True)
             file.save(filepath)
             
             city = request.form.get('city', 'NewYork, NY, US')
             prediction_range = int(request.form.get('prediction_range', 7))
             
-            logger.info(f"Form data - City: {city}, Prediction Range: {prediction_range}")
             logger.info(f"Processing data for city: {city}, prediction range: {prediction_range}")
             
             results = process_data(filepath, city, prediction_range)
             logger.info("Data processed successfully")
+            
+            # Add paths to generated images
+            results['temperature_over_time_path'] = '/outputs/temperature_over_time.png'
+            results['temperature_distribution_path'] = '/outputs/temperature_distribution.png'
+            results['correlation_heatmap_path'] = '/outputs/correlation_heatmap.png'
+            
             return jsonify(results)
         else:
             logger.error(f"Invalid file type: {file.filename}")

@@ -7,13 +7,14 @@ def create_app():
     
     # Set up logging
     logging.basicConfig(level=logging.INFO)
-    
-    
+   
     app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
-    app.config['MAX_CONTENT_LENGTH'] = 16 * 1024 * 1024  # 16MB max-limit
+    app.config['OUTPUT_FOLDER'] = '/tmp/outputs'
+    app.static_folder = '/tmp'  # This allows serving files from /tmp
     
     # Ensure the upload folder exists
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
+    os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
     
     from .routes import main
     app.register_blueprint(main)
