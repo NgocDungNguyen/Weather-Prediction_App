@@ -10,7 +10,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
     console.log('DOM fully loaded and parsed');
 
-    // Update file label when a file is selected
     fileInput.addEventListener('change', function () {
         console.log('File input changed');
         if (fileInput.files.length > 0) {
@@ -22,7 +21,6 @@ document.addEventListener('DOMContentLoaded', function () {
         }
     });
 
-    // Handle form submission
     form.addEventListener('submit', function (e) {
         e.preventDefault();
         console.log('Form submitted');
@@ -31,7 +29,6 @@ document.addEventListener('DOMContentLoaded', function () {
 
         const formData = new FormData(form);
         
-        // Log form data
         for (let [key, value] of formData.entries()) {
             console.log(key, value);
         }
@@ -76,7 +73,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         data.predictions.forEach(function(prediction) {
             tableHTML += '<tr>' +
-                '<td class="border border-gray-300 px-4 py-2">' + prediction.date + '</td>' +
+                '<td class="border border-gray-300 px-4 py-2">' + prediction.datetime + '</td>' +
                 '<td class="border border-gray-300 px-4 py-2">' + prediction.predicted_tempmax.toFixed(2) + '</td>' +
                 '</tr>';
         });
@@ -84,9 +81,9 @@ document.addEventListener('DOMContentLoaded', function () {
         tableHTML += '</tbody></table>';
         table.innerHTML = tableHTML;
 
-        document.getElementById('temp-over-time').src = '/static/outputs/temperature_over_time.png';
-        document.getElementById('temp-distribution').src = '/static/outputs/temperature_distribution.png';
-        document.getElementById('correlation-heatmap').src = '/static/outputs/correlation_heatmap.png';
+        document.getElementById('temp-over-time').src = data.temperature_over_time_path;
+        document.getElementById('temp-distribution').src = data.temperature_distribution_path;
+        document.getElementById('correlation-heatmap').src = data.correlation_heatmap_path;
         document.getElementById('download-csv').href = '/download/' + data.csv_filename;
 
         results.scrollIntoView({ behavior: 'smooth' });

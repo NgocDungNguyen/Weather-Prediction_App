@@ -82,7 +82,8 @@ def process_data(filename, city, prediction_range):
         return {
             'predictions': future_pred.to_dict(orient='records'),
             'best_model': best_model_name,
-            'rmse': np.sqrt(mean_squared_error(y_test, best_model_tuned.predict(X_test)))
+            'rmse': np.sqrt(mean_squared_error(y_test, best_model_tuned.predict(X_test))),
+            'csv_filename': f"{city}_predictions.csv"
         }
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")

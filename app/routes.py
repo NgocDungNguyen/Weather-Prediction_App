@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app, url_for
 from .pipeline import process_data
 from werkzeug.utils import secure_filename
 import os
@@ -12,12 +12,6 @@ ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
-
-def get_upload_folder():
-    return current_app.config['UPLOAD_FOLDER']
-
-def get_output_folder():
-    return current_app.config['OUTPUT_FOLDER']
 
 @main.route('/')
 def index():
@@ -38,7 +32,7 @@ def upload():
         
         if file and allowed_file(file.filename):
             filename = secure_filename(file.filename)
-            filepath = os.path.join(get_upload_folder(), filename)
+            filepath = os.path.join(current_app.config['UPLOAD_FOLDER'], filename)
             logger.info(f"Saving file to: {filepath}")
             file.save(filepath)
             
@@ -51,9 +45,9 @@ def upload():
             logger.info("Data processed successfully")
             
             # Add paths to generated images
-            results['temperature_over_time_path'] = '/outputs/temperature_over_time.png'
-            results['temperature_distribution_path'] = '/outputs/temperature_distribution.png'
-            results['correlation_heatmap_path'] = '/outputs/correlation_heatmap.png'
+            results['temperature_over_time_path'] = url_for('static', filename='outputs/temperature_over_time.png')
+            results['temperature_distribution_path'] = url_for('static', filename='outputs/temperature_distribution.png')
+            results['correlation_heatmap_path'] = url_for('static', filename='outputs/correlation_heatmap.png')
             
             return jsonify(results)
         else:
@@ -67,7 +61,7 @@ def upload():
 @main.route('/download/<filename>')
 def download(filename):
     try:
-        return send_file(os.path.join(get_output_folder(), filename), as_attachment=True)
+        return send_file(os.path.join(current_app.config['OUTPUT_FOLDER'], filename), as_attachment=True)
     except Exception as e:
         logger.error(f"Error in download route: {str(e)}")
         return jsonify({'error': 'File not found'}), 404

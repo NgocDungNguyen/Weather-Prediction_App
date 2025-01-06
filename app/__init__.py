@@ -10,9 +10,8 @@ def create_app():
    
     app.config['UPLOAD_FOLDER'] = '/tmp/uploads'
     app.config['OUTPUT_FOLDER'] = '/tmp/outputs'
-    app.static_folder = '/tmp'  # This allows serving files from /tmp
     
-    # Ensure the upload folder exists
+    # Ensure the upload and output folders exist
     os.makedirs(app.config['UPLOAD_FOLDER'], exist_ok=True)
     os.makedirs(app.config['OUTPUT_FOLDER'], exist_ok=True)
     
