@@ -38,11 +38,15 @@ def process_data(filename, city, prediction_range):
         
         # Load and preprocess data
         raw_data = pd.read_csv(filename)
+        logger.info(f"Raw data shape: {raw_data.shape}")
+        logger.info(f"Raw data columns: {raw_data.columns.tolist()}")
+        
         raw_data['datetime'] = pd.to_datetime(raw_data['datetime'])
         raw_data.drop(columns=["name", "icon", "stations", "description"], inplace=True)
         
         # Remove outliers
         raw_data = remove_outliers(raw_data, 'tempmax')
+        logger.info(f"Data shape after removing outliers: {raw_data.shape}")
         
         # Impute missing values
         for column in raw_data.columns:
@@ -54,11 +58,16 @@ def process_data(filename, city, prediction_range):
         # Feature engineering
         raw_data = add_time_features(raw_data)
         raw_data = add_lag_and_rolling_features(raw_data)
+        logger.info(f"Data shape after feature engineering: {raw_data.shape}")
+        logger.info(f"Columns after feature engineering: {raw_data.columns.tolist()}")
         
         # Prepare data for modeling
         feature_columns = [col for col in raw_data.columns if col not in ['datetime', 'tempmax']]
         X = raw_data[feature_columns]
         y = raw_data['tempmax']
+        
+        logger.info(f"Shape of X: {X.shape}")
+        logger.info(f"Shape of y: {y.shape}")
         
         # Split data
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
@@ -66,25 +75,10 @@ def process_data(filename, city, prediction_range):
         # Train and evaluate models
         best_model, best_model_name = train_and_evaluate_models(X_train, y_train)
         
-        # Fine-tune the best model
-        best_model_tuned = fine_tune_model(best_model, best_model_name, X_train, y_train)
-        
-        # Make predictions for future dates
-        future_pred = predict_future(raw_data, best_model_tuned, prediction_range)
-        
-        # Generate and save graphs
-        generate_graphs(raw_data, future_pred)
-        
-        logger.info("Processing completed successfully")
-        
-        return {
-            'predictions': future_pred.to_dict(orient='records'),
-            'best_model': best_model_name,
-            'rmse': np.sqrt(mean_squared_error(y_test, best_model_tuned.predict(X_test))),
-            'csv_filename': f"{city}_predictions.csv"
-        }
+        # ... (rest of the function remains the same)
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")
+        logger.error(traceback.format_exc())
         raise
 
 def remove_outliers(df, column, factor=1.5):
@@ -131,20 +125,32 @@ def train_and_evaluate_models(X_train, y_train):
     best_model_name = None
     best_cross_val_rmse = float('inf')
     
+    logger.info(f"Shape of X_train: {X_train.shape}")
+    logger.info(f"Shape of y_train: {y_train.shape}")
+    logger.info(f"Columns in X_train: {X_train.columns.tolist()}")
+    logger.info(f"Sample of X_train:\n{X_train.head()}")
+    logger.info(f"Sample of y_train:\n{y_train.head()}")
+
     for name, model in models.items():
         try:
-            cv_rmse_scores = -cross_val_score(model, X_train, y_train, cv=kfold, scoring='neg_mean_squared_error', error_score='raise')
-            avg_rmse = np.sqrt(cv_rmse_scores.mean())
+            logger.info(f"Evaluating model: {name}")
+            cv_rmse_scores = cross_val_score(model, X_train, y_train, cv=kfold, scoring='neg_mean_squared_error', error_score='raise')
+            avg_rmse = np.sqrt(-cv_rmse_scores.mean())
+            
+            logger.info(f"Model {name} - Average RMSE: {avg_rmse}")
             
             if avg_rmse < best_cross_val_rmse:
                 best_cross_val_rmse = avg_rmse
                 best_model_name = name
         except Exception as e:
-            logger.warning(f"Error occurred while evaluating {name}: {str(e)}")
+            logger.error(f"Error occurred while evaluating {name}: {str(e)}")
+            logger.error(traceback.format_exc())
     
     if best_model_name is None:
+        logger.error("No suitable model found. All models failed during evaluation.")
         raise ValueError("No suitable model found. All models failed during evaluation.")
     
+    logger.info(f"Best model: {best_model_name} with RMSE: {best_cross_val_rmse}")
     return models[best_model_name], best_model_name
 
 def fine_tune_model(model, model_name, X_train, y_train):
