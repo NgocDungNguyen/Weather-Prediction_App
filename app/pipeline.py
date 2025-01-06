@@ -1,8 +1,10 @@
 import pandas as pd
 import numpy as np
-from sklearn.model_selection import train_test_split, cross_val_score
+from sklearn.model_selection import train_test_split, cross_val_score, RandomizedSearchCV
 from sklearn.ensemble import RandomForestRegressor
-from sklearn.linear_model import LinearRegression
+from sklearn.linear_model import LinearRegression, Ridge, BayesianRidge
+from sklearn.preprocessing import PolynomialFeatures
+from sklearn.pipeline import make_pipeline
 from sklearn.metrics import mean_squared_error
 import matplotlib.pyplot as plt
 import seaborn as sns
@@ -11,6 +13,7 @@ import logging
 import traceback
 from datetime import timedelta
 from flask import current_app
+from scipy.stats import randint, uniform, loguniform
 
 logger = logging.getLogger(__name__)
 
@@ -43,19 +46,23 @@ def process_data(filename, city, prediction_range):
         # Train and evaluate models
         best_model, best_model_name = train_and_evaluate_models(X_train, y_train)
         
+        # Fine-tune the best model
+        best_model_tuned = fine_tune_model(best_model, best_model_name, X_train, y_train)
+        
         # Make predictions for future dates
-        future_pred = predict_future(raw_data, best_model, prediction_range, feature_columns)
+        future_pred = predict_future(raw_data, best_model_tuned, prediction_range, feature_columns)
         
         # Generate and save graphs
-        generate_graphs(raw_data, future_pred)
+        graph_paths = generate_graphs(raw_data, future_pred)
         
         logger.info("Processing completed successfully")
         
         return {
             'predictions': future_pred.to_dict(orient='records'),
             'best_model': best_model_name,
-            'rmse': np.sqrt(mean_squared_error(y_test, best_model.predict(X_test))),
-            'csv_filename': f"{city}_predictions.csv"
+            'rmse': np.sqrt(mean_squared_error(y_test, best_model_tuned.predict(X_test))),
+            'csv_filename': f"{city}_predictions.csv",
+            'graph_paths': graph_paths
         }
     except Exception as e:
         logger.error(f"Error in process_data: {str(e)}")
@@ -80,7 +87,10 @@ def add_time_features(df):
 def train_and_evaluate_models(X_train, y_train):
     models = {
         'RandomForestReg': RandomForestRegressor(n_estimators=100, random_state=42),
-        'LinearReg': LinearRegression()
+        'BayesianRidge': BayesianRidge(),
+        'LinearReg': LinearRegression(),
+        'Ridge': Ridge(random_state=42),
+        'PolynomialReg': make_pipeline(PolynomialFeatures(degree=2), LinearRegression())
     }
     
     best_model_name = None
@@ -104,6 +114,45 @@ def train_and_evaluate_models(X_train, y_train):
     best_model.fit(X_train, y_train)
     
     return best_model, best_model_name
+
+def fine_tune_model(model, model_name, X_train, y_train):
+    param_grids = {
+        'RandomForestReg': {
+            'n_estimators': randint(100, 2000),
+            'max_depth': randint(5, 50),
+            'min_samples_split': randint(2, 20),
+            'min_samples_leaf': randint(1, 20),
+            'max_features': uniform(0.1, 0.9)
+        },
+        'BayesianRidge': {
+            'alpha_1': uniform(0.001, 1),
+            'alpha_2': uniform(0.001, 1),
+            'lambda_1': uniform(0.001, 1),
+            'lambda_2': uniform(0.001, 1)
+        },
+        'LinearReg': {
+            'fit_intercept': [True, False],
+            'copy_X': [True, False],
+            'positive': [True, False]
+        },
+        'Ridge': {
+            'alpha': loguniform(1e-3, 1e2),
+            'max_iter': [5000, 10000]
+        },
+        'PolynomialReg': {
+            'polynomialfeatures__degree': randint(2, 5),
+            'linearregression__fit_intercept': [True, False]
+        }
+    }
+    
+    if model_name in param_grids:
+        grid_search = RandomizedSearchCV(model, param_distributions=param_grids[model_name],
+                                         n_iter=100, cv=3, scoring='neg_mean_squared_error',
+                                         n_jobs=-1, random_state=42, verbose=1)
+        grid_search.fit(X_train, y_train)
+        return grid_search.best_estimator_
+    else:
+        return model
 
 def predict_future(data, model, prediction_range, feature_columns):
     last_date = data['datetime'].max()
@@ -132,7 +181,8 @@ def generate_graphs(historical_data, future_data):
     plt.xlabel('Date')
     plt.ylabel('Temperature (°C)')
     plt.legend()
-    plt.savefig(os.path.join(output_folder, 'temperature_over_time.png'))
+    temp_over_time_path = os.path.join(output_folder, 'temperature_over_time.png')
+    plt.savefig(temp_over_time_path)
     plt.close()
     
     # Temperature distribution
@@ -140,7 +190,8 @@ def generate_graphs(historical_data, future_data):
     sns.histplot(historical_data['tempmax'], kde=True)
     plt.title('Temperature Distribution')
     plt.xlabel('Temperature (°C)')
-    plt.savefig(os.path.join(output_folder, 'temperature_distribution.png'))
+    temp_dist_path = os.path.join(output_folder, 'temperature_distribution.png')
+    plt.savefig(temp_dist_path)
     plt.close()
     
     # Correlation heatmap
@@ -148,9 +199,18 @@ def generate_graphs(historical_data, future_data):
     numeric_data = historical_data.select_dtypes(include=[np.number])
     sns.heatmap(numeric_data.corr(), annot=True, fmt=".2f", cmap='coolwarm')
     plt.title('Correlation Heatmap')
-    plt.savefig(os.path.join(output_folder, 'correlation_heatmap.png'))
+    corr_heatmap_path = os.path.join(output_folder, 'correlation_heatmap.png')
+    plt.savefig(corr_heatmap_path)
     plt.close()
 
     # Save predictions to CSV
     csv_filename = "predictions.csv"
-    future_data.to_csv(os.path.join(output_folder, csv_filename), index=False)
+    csv_path = os.path.join(output_folder, csv_filename)
+    future_data.to_csv(csv_path, index=False)
+
+    return {
+        'temperature_over_time': '/static/outputs/temperature_over_time.png',
+        'temperature_distribution': '/static/outputs/temperature_distribution.png',
+        'correlation_heatmap': '/static/outputs/correlation_heatmap.png',
+        'csv_file': f'/static/outputs/{csv_filename}'
+    }

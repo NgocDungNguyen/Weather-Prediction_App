@@ -1,4 +1,4 @@
-from flask import Blueprint, render_template, request, jsonify, send_file, current_app
+from flask import Blueprint, render_template, request, jsonify, send_file, current_app, url_for
 from .pipeline import process_data
 from werkzeug.utils import secure_filename
 import os
@@ -50,6 +50,15 @@ def upload():
             try:
                 results = future.result(timeout=60)  # 60 seconds timeout
                 logger.info("Data processed successfully")
+                
+                # Include graph paths in the response
+                results['graph_paths'] = {
+                    'temperature_over_time': url_for('static', filename='outputs/temperature_over_time.png'),
+                    'temperature_distribution': url_for('static', filename='outputs/temperature_distribution.png'),
+                    'correlation_heatmap': url_for('static', filename='outputs/correlation_heatmap.png'),
+                    'csv_file': url_for('static', filename=f'outputs/{results["csv_filename"]}')
+                }
+                
                 return jsonify(results)
             except TimeoutError:
                 logger.error("Processing timed out")

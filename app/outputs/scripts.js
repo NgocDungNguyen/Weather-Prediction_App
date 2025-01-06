@@ -81,10 +81,10 @@ document.addEventListener('DOMContentLoaded', function () {
         tableHTML += '</tbody></table>';
         table.innerHTML = tableHTML;
 
-        document.getElementById('temp-over-time').src = data.temperature_over_time_path;
-        document.getElementById('temp-distribution').src = data.temperature_distribution_path;
-        document.getElementById('correlation-heatmap').src = data.correlation_heatmap_path;
-        document.getElementById('download-csv').href = '/download/' + data.csv_filename;
+        document.getElementById('temp-over-time').src = data.graph_paths.temperature_over_time;
+        document.getElementById('temp-distribution').src = data.graph_paths.temperature_distribution;
+        document.getElementById('correlation-heatmap').src = data.graph_paths.correlation_heatmap;
+        document.getElementById('download-csv').href = data.graph_paths.csv_file;
 
         results.scrollIntoView({ behavior: 'smooth' });
     }
