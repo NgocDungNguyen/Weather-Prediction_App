@@ -56,7 +56,8 @@ def process_data(filename, city, prediction_range):
         raw_data = add_lag_and_rolling_features(raw_data)
         
         # Prepare data for modeling
-        X = raw_data.drop('tempmax', axis=1)
+        feature_columns = [col for col in raw_data.columns if col not in ['datetime', 'tempmax']]
+        X = raw_data[feature_columns]
         y = raw_data['tempmax']
         
         # Split data
@@ -131,12 +132,18 @@ def train_and_evaluate_models(X_train, y_train):
     best_cross_val_rmse = float('inf')
     
     for name, model in models.items():
-        cv_rmse_scores = -cross_val_score(model, X_train, y_train, cv=kfold, scoring='neg_mean_squared_error')
-        avg_rmse = np.sqrt(cv_rmse_scores.mean())
-        
-        if avg_rmse < best_cross_val_rmse:
-            best_cross_val_rmse = avg_rmse
-            best_model_name = name
+        try:
+            cv_rmse_scores = -cross_val_score(model, X_train, y_train, cv=kfold, scoring='neg_mean_squared_error', error_score='raise')
+            avg_rmse = np.sqrt(cv_rmse_scores.mean())
+            
+            if avg_rmse < best_cross_val_rmse:
+                best_cross_val_rmse = avg_rmse
+                best_model_name = name
+        except Exception as e:
+            logger.warning(f"Error occurred while evaluating {name}: {str(e)}")
+    
+    if best_model_name is None:
+        raise ValueError("No suitable model found. All models failed during evaluation.")
     
     return models[best_model_name], best_model_name
 
@@ -231,12 +238,17 @@ def predict_future(data, model, prediction_range):
     
     for col in data.columns:
         if col not in ['datetime', 'tempmax']:
-            future_data[col] = data[col].mean()
+            if col in ['day_of_year', 'month', 'day_of_week', 'is_weekend']:
+                future_data[col] = getattr(future_data['datetime'].dt, col.split('_')[-1])
+            elif col in ['day_of_year_sin', 'day_of_year_cos']:
+                future_data[col] = np.sin(2 * np.pi * future_data['datetime'].dt.dayofyear / 365.25) if 'sin' in col else np.cos(2 * np.pi * future_data['datetime'].dt.dayofyear / 365.25)
+            else:
+                future_data[col] = data[col].mean()
     
-    future_data = add_time_features(future_data)
     future_data = add_lag_and_rolling_features(future_data)
     
-    future_pred = model.predict(future_data.drop('datetime', axis=1))
+    feature_columns = [col for col in future_data.columns if col not in ['datetime', 'tempmax']]
+    future_pred = model.predict(future_data[feature_columns])
     future_data['predicted_tempmax'] = future_pred
     
     return future_data[['datetime', 'predicted_tempmax']]
