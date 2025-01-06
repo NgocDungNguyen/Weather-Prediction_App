@@ -9,7 +9,7 @@ from concurrent.futures import ThreadPoolExecutor, TimeoutError
 main = Blueprint('main', __name__)
 logger = logging.getLogger(__name__)
 
-executor = ThreadPoolExecutor(max_workers=2)
+executor = ThreadPoolExecutor(max_workers=1)
 
 ALLOWED_EXTENSIONS = {'csv', 'xlsx'}
 
@@ -48,7 +48,7 @@ def upload():
             app = current_app._get_current_object()
             future = executor.submit(process_data_with_app_context, app, filepath, city, prediction_range)
             try:
-                results = future.result(timeout=60)  # 60 seconds timeout
+                results = future.result(timeout=120)  # 120 seconds timeout
                 logger.info("Data processed successfully")
                 
                 # Include graph paths in the response
