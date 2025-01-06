@@ -44,15 +44,18 @@ def process_data(filename, city, prediction_range):
         
         raw_data['datetime'] = pd.to_datetime(raw_data['datetime'])
         
+        # Remove non-numeric columns except 'datetime'
+        numeric_columns = ['datetime'] + raw_data.select_dtypes(include=[np.number]).columns.tolist()
+        raw_data = raw_data[numeric_columns]
+        
         # Remove outliers
         raw_data = remove_outliers(raw_data, 'tempmax')
         logger.info(f"Data shape after removing outliers: {raw_data.shape}")
         
         # Impute missing values
         for column in raw_data.columns:
-            if raw_data[column].dtype == 'object':
-                raw_data[column].fillna('Unknown', inplace=True)
-            else:
+            if raw_data[column].dtype != 'datetime64[ns]':
+                raw_data[column] = pd.to_numeric(raw_data[column], errors='coerce')
                 raw_data[column].fillna(raw_data[column].median(), inplace=True)
         
         # Feature engineering
@@ -306,5 +309,5 @@ def generate_graphs(historical_data, future_data):
     plt.close()
 
     # Save predictions to CSV
-    csv_filename = f"{historical_data['city'].iloc[0]}_predictions.csv"
+    csv_filename = "predictions.csv"
     future_data.to_csv(os.path.join(output_folder, csv_filename), index=False)
