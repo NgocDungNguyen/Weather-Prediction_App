@@ -151,7 +151,72 @@ def fine_tune_model(model, model_name, X_train, y_train):
             'min_samples_leaf': randint(1, 20),
             'max_features': uniform(0.1, 0.9)
         },
-        # Add other model param_grids here...
+        'GradientBoostingReg': {
+            'n_estimators': randint(100, 2000),
+            'learning_rate': uniform(0.01, 0.2),
+            'max_depth': randint(3, 20),
+            'min_samples_split': randint(2, 20),
+            'min_samples_leaf': randint(1, 20),
+            'subsample': uniform(0.5, 0.5)
+        },
+        'LGBMReg': {
+            'num_leaves': randint(20, 200),
+            'learning_rate': uniform(0.01, 0.2),
+            'n_estimators': randint(100, 2000),
+            'min_child_samples': randint(1, 50),
+            'subsample': uniform(0.5, 0.5),
+            'colsample_bytree': uniform(0.5, 0.5),
+            'verbosity': [-1]
+        },
+        'XGBBoost': {
+            'n_estimators': randint(100, 2000),
+            'learning_rate': uniform(0.01, 0.2),
+            'max_depth': randint(3, 20),
+            'min_child_weight': randint(1, 10),
+            'subsample': uniform(0.5, 0.5),
+            'colsample_bytree': uniform(0.5, 0.5),
+            'gamma': uniform(0, 0.5)
+        },
+        'BayesianRidge': {
+            'alpha_1': uniform(0.001, 1),
+            'alpha_2': uniform(0.001, 1),
+            'lambda_1': uniform(0.001, 1),
+            'lambda_2': uniform(0.001, 1)
+        },
+        'LinearReg': {
+            'fit_intercept': [True, False],
+            'copy_X': [True, False],
+            'positive': [True, False]
+        },
+        'Ridge': {
+            'alpha': loguniform(1e-3, 1e2),
+            'max_iter': [5000, 10000]
+        },
+        'Lasso': {
+            'alpha': loguniform(1e-3, 1e2),
+            'max_iter': [5000, 10000]
+        },
+        'SVR': {
+            'C': loguniform(1e-2, 1e2),
+            'epsilon': loguniform(1e-3, 1),
+            'kernel': ['linear', 'poly', 'rbf', 'sigmoid']
+        },
+        'MLPRegressor': {
+            'hidden_layer_sizes': [(50,50,50), (50,100,50), (100,), (100,100), (100,50,100)],
+            'activation': ['tanh', 'relu', 'logistic'],
+            'solver': ['sgd', 'adam'],
+            'alpha': loguniform(1e-4, 1e-1),
+            'learning_rate': ['constant','adaptive'],
+            'learning_rate_init': loguniform(1e-4, 1e-1),
+            'max_iter': [200, 500, 1000],
+            'early_stopping': [True, False],
+            'momentum': uniform(0.0, 1.0),
+            'nesterovs_momentum': [True, False]
+        },
+        'PolynomialReg': {
+            'polynomialfeatures__degree': randint(2, 5),
+            'linearregression__fit_intercept': [True, False]
+        }
     }
     
     grid_search = RandomizedSearchCV(model, param_distributions=param_grids.get(model_name, {}),
